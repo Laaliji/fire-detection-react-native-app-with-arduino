@@ -24,7 +24,7 @@ let lastProcessedVideoId = null;
 // Configuration
 const RECORDING_DURATION = 10000; // 10 seconds recording
 const PROCESSING_INTERVAL = 2000; // 2 seconds processing interval
-const FLASK_SERVER_URL = 'http://192.168.100.184:5001';
+const FLASK_SERVER_URL = 'http://192.168.1.158:5001';
 
 // Endpoint to start recording
 app.get("/start_recording", async (req, res) => {
@@ -37,7 +37,7 @@ app.get("/start_recording", async (req, res) => {
 
   isRecording = true;
 
-  const streamUrl = "https://865e-105-74-67-203.ngrok-free.app/stream";
+  const streamUrl = "https://1584-105-74-67-203.ngrok-free.app/stream";
   const outputDir = path.join(__dirname, "recordings");
   const outputPath = path.join(outputDir, "latest.mp4");
 
