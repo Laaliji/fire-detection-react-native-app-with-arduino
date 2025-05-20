@@ -37,15 +37,26 @@ export default function Historic() {
   const [histories, setHistories] = useState<HistoricRecord[]>([]);
   const [filter, setFilter] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchHistoric = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const historicList = await getHistorics();
-        setHistories(historicList.histories as []);
+        const result = await getHistorics();
+        if (result.error) {
+          setError(result.error.toString());
+          setHistories([]);
+        } else if (result.histories) {
+          setHistories(result.histories);
+        } else {
+          setHistories([]);
+        }
       } catch (error) {
         console.error("Failed to fetch historic data:", error);
+        setError("Failed to load historic data");
+        setHistories([]);
       } finally {
         setLoading(false);
       }
@@ -53,6 +64,13 @@ export default function Historic() {
     
     fetchHistoric();
   }, []);
+
+  const filteredHistories = histories.filter((item) => {
+    if (filter === 1) return true;
+    if (filter === 2) return item.temperature > item.gaz;
+    if (filter === 3) return item.gaz > item.temperature;
+    return true;
+  });
 
   return (
     <>
@@ -90,31 +108,26 @@ export default function Historic() {
             Array.from({ length: 5 }).map((_, index) => (
               <SkeletonItem key={`skeleton-${index}`} />
             ))
-          ) : (
-            histories
-              .filter((item) => {
-                if (filter === 1) return true;
-                if (filter === 2) return item.temperature > item.gaz;
-                if (filter === 3) return item.gaz > item.temperature;
-                return true;
-              })
-              .map((item, index) => (
-                <ItemAlert
-                  key={index}
-                  title={item.state ? 'No danger detected' : 'A person in danger has been discovered'}
-                  date={formatDateTime(item.date)}
-                  alert={item.temperature > item.gaz ? 
-                    ("Temperature : " + item.temperature + "°C detected") : 
-                    ("Gaz : " + item.gaz + "ppm detected")}
-                  type={item.state ? 'normal' : 'danger'}
-                />
-              ))
-          )}
-
-          {!loading && histories.length === 0 && (
+          ) : error ? (
+            <View className="w-[90%] py-8 flex items-center justify-center">
+              <Text className="text-red-500 text-lg">{error}</Text>
+            </View>
+          ) : filteredHistories.length === 0 ? (
             <View className="w-[90%] py-8 flex items-center justify-center">
               <Text className="text-gray-500 text-lg">No records found</Text>
             </View>
+          ) : (
+            filteredHistories.map((item, index) => (
+              <ItemAlert
+                key={index}
+                title={item.state ? 'No danger detected' : 'A person in danger has been discovered'}
+                date={formatDateTime(item.date)}
+                alert={item.temperature > item.gaz ? 
+                  ("Temperature : " + item.temperature + "°C detected") : 
+                  ("Gaz : " + item.gaz + "ppm detected")}
+                type={item.state ? 'normal' : 'danger'}
+              />
+            ))
           )}
         </ScrollView>
       </View>

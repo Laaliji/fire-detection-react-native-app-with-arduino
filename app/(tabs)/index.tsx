@@ -40,7 +40,11 @@ export default function HomeScreen() {
   const playSound = async () => {
     try {
       if (sound) {
-        await sound.unloadAsync();
+        try {
+          await sound.unloadAsync();
+        } catch (error) {
+          console.error('Error unloading existing sound:', error);
+        }
       }
       
       const { sound: newSound } = await Audio.Sound.createAsync(
@@ -57,13 +61,23 @@ export default function HomeScreen() {
 
   const stopSound = async () => {
     try {
-      if (sound && isSoundLoaded) {
-        await sound.stopAsync();
-        await sound.unloadAsync();
-        setIsSoundLoaded(false);
+      if (sound) {
+        if (isSoundLoaded) {
+          try {
+            await sound.stopAsync();
+          } catch (error) {
+            console.error('Error stopping sound:', error);
+          }
+        }
+        
+        try {
+          await sound.unloadAsync();
+        } catch (error) {
+          console.error('Error unloading sound:', error);
+        }
       }
     } catch (error) {
-      console.error('Error stopping sound:', error);
+      console.error('Error in stopSound:', error);
     } finally {
       setSound(null);
       setIsSoundLoaded(false);
@@ -82,8 +96,8 @@ export default function HomeScreen() {
   const thresholds = {
     temperature: 75,  
     humidity: 80,     
-    smoke: 30,        
-    gas: 50           
+    smoke: 200,       
+    gas: 200           
   };
 
   const blinkAnim = useRef(new Animated.Value(0)).current;
@@ -91,11 +105,13 @@ export default function HomeScreen() {
   const hasAlert = 
     parseInt(sensorValues.temperature) > thresholds.temperature ||
     parseInt(sensorValues.humidite) > thresholds.humidity ||
-    parseInt(sensorValues.gaz_detecte) > thresholds.smoke ||
+    parseInt(sensorValues.valeur_gaz) > thresholds.smoke ||
     parseInt(sensorValues.valeur_gaz) > thresholds.gas;
 
   useEffect(() => {
     let blinkAnimation: Animated.CompositeAnimation | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+    let soundTimeoutId: NodeJS.Timeout | null = null;
     
     if (hasAlert) {
       blinkAnimation = Animated.loop(
@@ -116,9 +132,11 @@ export default function HomeScreen() {
       );
       blinkAnimation.start();
 
-      playSound();
+      soundTimeoutId = setTimeout(() => {
+        playSound();
+      }, 300);
 
-      const timeoutId = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         stopSound();
         router.replace('/online');
       }, 4000);
@@ -127,7 +145,12 @@ export default function HomeScreen() {
         if (blinkAnimation) {
           blinkAnimation.stop();
         }
-        clearTimeout(timeoutId);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        if (soundTimeoutId) {
+          clearTimeout(soundTimeoutId);
+        }
         stopSound();
       };
     } else {
@@ -170,8 +193,8 @@ export default function HomeScreen() {
         <View style={styles.sensorRow}>
           <CardState 
             ElementSensorName='Smoke' 
-            Value={sensorValues.gaz_detecte + '%'} 
-            State={parseInt(sensorValues.gaz_detecte) <= thresholds.smoke} 
+            Value={sensorValues.valeur_gaz + '%'} 
+            State={parseInt(sensorValues.valeur_gaz) <= thresholds.smoke} 
           />
           <CardState 
             ElementSensorName='Gas' 

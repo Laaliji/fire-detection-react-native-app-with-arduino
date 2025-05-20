@@ -658,7 +658,7 @@ export default function Online() {
               style={styles.alertButton}
               text="ALERT D'URGENCE"
               color="#F28C38"
-              onPress={() => Linking.openURL('tel:0688785') }
+              onPress={() => Linking.openURL('tel:15') }
             />
           </View>
       }

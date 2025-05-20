@@ -96,7 +96,7 @@ app.get("/analyze_video", async (req, res) => {
     formData.append('video', fs.createReadStream(videoPath));
 
     // Send to Flask server
-    const response = await axios.post(`${'http://192.168.1.7:5001'}/handle_video`, formData, {
+    const response = await axios.post(`${'http://192.168.1.158:5001'}/handle_video`, formData, {
       headers: {
         ...formData.getHeaders()
       }
@@ -132,7 +132,7 @@ app.get("/get_analyzed_video", async (req, res) => {
   }
 
   try {
-    const response = await axios.get(`${'http://192.168.1.7:5001'}/get_handled_video/${lastProcessedVideoId}`, {
+    const response = await axios.get(`${'http://192.168.1.158:5001'}/get_handled_video/${lastProcessedVideoId}`, {
       responseType: 'stream'
     });
 

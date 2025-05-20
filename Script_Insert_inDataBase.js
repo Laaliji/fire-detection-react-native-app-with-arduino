@@ -14,13 +14,18 @@ function updateCapteurs() {
   temperature += 5;
   valeur_gaz += 5;
 
-  // Envoyer les nouvelles valeurs dans la base
+  // Envoyer les valeurs de température et humidité dans 'capteurs'
   set(ref(db, 'capteurs'), {
-    gaz_detecte,
     humidite,
-    temperature,
-    valeur_gaz
+    temperature
   });
+  
+  // Envoyer les valeurs de gaz dans 'capteursGaz'
+  set(ref(db, 'capteursGaz'), {
+    valeur_gaz,
+    gaz_detecte
+  });
+  
   console.log('Valeurs mises à jour dans Firebase')
 }
 

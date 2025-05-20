@@ -16,8 +16,16 @@ import { useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import { router } from 'expo-router';
 import { Linking } from 'react-native';
+import { getSensorData } from '@/db/actions';
 
 const { width } = Dimensions.get('window');
+
+interface SensorDataRecord {
+  temperature: string,
+  valeur_gaz: string,
+  humidite: string,
+  gaz_detecte: string
+}
 
 const FireAlertResults: React.FC = () => {
   const params = useLocalSearchParams();
@@ -29,6 +37,30 @@ const FireAlertResults: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const videoRef = useRef<Video>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  const [sensorValues, setSensorValues] = useState<SensorDataRecord>({
+    temperature: '0',
+    humidite: '0',
+    gaz_detecte: '0',
+    valeur_gaz: '0'
+  });
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      const { sensorData, error } = await getSensorData();
+      if (error) {
+        console.log(error);
+      } else if (sensorData) {
+        setSensorValues(sensorData);
+      }
+    };
+    
+    fetchData();
+    
+    const interval = setInterval(fetchData, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
   
   useEffect(() => {
     console.log("status:", status);
@@ -64,7 +96,20 @@ const FireAlertResults: React.FC = () => {
     );
   };
 
-  const isDanger = (status === 'InDanger' ? true : false);
+  // Define thresholds (same as in home page for consistency)
+  const thresholds = {
+    temperature: 75,  
+    humidity: 80,     
+    smoke: 100,       
+    gas: 100           
+  };
+
+  // Check if values exceed thresholds
+  const temperatureExceeded = parseInt(sensorValues.temperature) > thresholds.temperature;
+  const gasExceeded = parseInt(sensorValues.valeur_gaz) > thresholds.gas;
+
+  // Use both the status from AI model and sensor values to determine danger
+  const isDanger = (status === 'InDanger' || temperatureExceeded || gasExceeded);
   
   const headerBackgroundColor = isDanger ? '#DC2626' : '#10B981';
   const headerIcon = isDanger ? 'alert-triangle' : 'check-circle';
@@ -77,6 +122,10 @@ const FireAlertResults: React.FC = () => {
   const emergencyButtonColor = isDanger ? '#DC2626' : '#6B7280';
   const emergencyButtonShadowColor = isDanger ? "#DC2626" : "#6B7280";
   const emergencyButtonPulse = isDanger;
+
+  // Calculate progress bar percentages
+  const temperaturePercent = Math.min(parseInt(sensorValues.temperature) / 100 * 100, 100);
+  const gasPercent = Math.min(parseInt(sensorValues.valeur_gaz) / 500 * 100, 100);
 
   return <>
     <Stack.Screen options={{ headerShown: false }} />
@@ -130,14 +179,14 @@ const FireAlertResults: React.FC = () => {
         <View style={styles.metricContainer}>
           <View style={styles.metricLabelRow}>
             <Text style={styles.metricLabel}>Température</Text>
-            <Text style={styles.metricValue}>{80}°C</Text>
+            <Text style={styles.metricValue}>{sensorValues.temperature}°C</Text>
           </View>
           <View style={styles.progressBarBg}>
             <View style={[
               styles.progressBar, 
               { 
-                width: isDanger ? '75%' : '30%',
-                backgroundColor: progressBarColor 
+                width: `${temperaturePercent}%`,
+                backgroundColor: parseInt(sensorValues.temperature) > thresholds.temperature ? '#DC2626' : progressBarColor 
               }
             ]} />
           </View>
@@ -146,14 +195,14 @@ const FireAlertResults: React.FC = () => {
         <View style={styles.metricContainer}>
           <View style={styles.metricLabelRow}>
             <Text style={styles.metricLabel}>Niveau de gaz</Text>
-            <Text style={styles.metricValue}>{50}%</Text>
+            <Text style={styles.metricValue}>{sensorValues.valeur_gaz} ppm</Text>
           </View>
           <View style={styles.progressBarBg}>
             <View style={[
               styles.progressBar, 
               { 
-                width: `${9}%`,
-                backgroundColor: progressBarColor 
+                width: `${gasPercent}%`,
+                backgroundColor: parseInt(sensorValues.valeur_gaz) > thresholds.gas ? '#DC2626' : progressBarColor 
               }
             ]} />
           </View>
@@ -201,7 +250,7 @@ const FireAlertResults: React.FC = () => {
       ]}>
         <TouchableOpacity
           style={[styles.emergencyButton, { backgroundColor: emergencyButtonColor }]}
-          onPress={() => Linking.openURL('tel:0688785')}
+          onPress={() => Linking.openURL('tel:15')}
           activeOpacity={0.8}
         >
           <Icon name="phone-call" size={24} color="#fff" style={styles.emergencyIcon} />
